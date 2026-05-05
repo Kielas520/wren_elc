@@ -26,6 +26,8 @@ class Tracker:
         self.kf_cy = KalmanFilter(q_scale=0.35, r_scale=0.1)    # cy 卡尔曼滤波器
         self.kf_dist = KalmanFilter(q_scale=0.01, r_scale=2.0)  # distance 卡尔曼滤波器
 
+        self.last_cy_vel = 0.0
+
         self.lost_count = 0  # 丢帧数
         self.frame_lost_tol = 8   # 丢帧容忍度 
         self.last_time = None
@@ -71,7 +73,7 @@ class Tracker:
 
     def filter(self, target):
         # 暂存变量
-        cx, cy, dist = 0, 0, 0.0
+        cx, cy, dist, = 0.0, 0.0, 0.0
         # 接口变量
         filtered_center = (0, 0)
         filtered_dist = 0.0
@@ -96,7 +98,7 @@ class Tracker:
                 pred_dist, _ = self.kf_dist.predict(dt)
                 # 更新
                 update_cx, _ = self.kf_cx.update(target.center[0])
-                update_cy, _ = self.kf_cy.update(target.center[1])
+                update_cy, self.last_cy_vel = self.kf_cy.update(target.center[1])
                 update_dist, _ = self.kf_dist.update(self.get_dist(target))
                 cx, cy, dist = update_cx, update_cy, update_dist
             else:
@@ -106,7 +108,7 @@ class Tracker:
                     self.status = Status.TMP_LOST   # 状态调整
                      # 预测
                     pred_cx, _ = self.kf_cx.predict(dt)
-                    pred_cy, _ = self.kf_cy.predict(dt)
+                    pred_cy, self.last_cy_vel = self.kf_cy.predict(dt)
                     pred_dist, _ = self.kf_dist.predict(dt)
                     cx, cy, dist = pred_cx, pred_cy, pred_dist
                 else:
